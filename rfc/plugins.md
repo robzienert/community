@@ -6,7 +6,7 @@
 |-|-|
 | **Status**     | **Proposed**, Accepted, Implemented, Obsolete |
 | **RFC  Num**      | _Update after PR has been made_ |
-| **Author(s)**  | Rob Zienert (`@robzienert`) |
+| **Author(s)**  | Rob Zienert (`@robzienert`), Cameron Motevasselani (`@link108`) |
 | **SIG / WG**   | _Applicable SIG(s) or Working Group(s)_ |
 | **Obsoletes**  | _<RFC-#s>, if any, or remove header_ |
 
@@ -82,12 +82,12 @@ An extension looks like the following:
 ```kotlin
 // Definition of the PluginStage extension point.
 // The annotation defined here also informs the Spinnaker
-// plugin framwework which runtimes are acceptable. This 
+// plugin framwework which runtimes are acceptable. This
 // annotation would additionally be used for other metadata
 // Spinnaker needs to know atop whatever PF4J offers out of
 // the box.
 @SpinnakerExtension(drivers = [
-  ExtensionDriver.LOCAL, 
+  ExtensionDriver.LOCAL,
 	ExtensionDriver.REMOTE
 ])
 class PipelineStageExtension : ExtensionPoint {
@@ -98,7 +98,7 @@ class PipelineStageExtension : ExtensionPoint {
 It is highly recommended to read the documentation of PF4J to fully understand the scope of this proposal.
 
 ### Front50 as the Source of Truth
-Operators will need the ability to understand, at a glance, what plugins are installed and enabled or disabled, their versions, as well as any other metadata about a plugin. Whether plugins are implemented as in-process or not, they Front50 should be used to track and expose a single source of truth of what plugins are installed in any particular service, as well as which ones are enabled or disabled. 
+Operators will need the ability to understand, at a glance, what plugins are installed and enabled or disabled, their versions, as well as any other metadata about a plugin. Whether plugins are implemented as in-process or not, Front50 should be used to track and expose a single source of truth of what plugins are installed in any particular service, as well as which ones are enabled or disabled.
 
 The Front50 plugin registry will also be exposed through Gate, and can be consumed by Deck to load the correct plugins on application startup.
 
@@ -107,6 +107,13 @@ Plugins can also be enabled or disabled at runtime without redeploying a service
 Halyard configs can be used to inform services of their _initial state_. When a service starts up, it will notify Front50 of what in-process plugins are installed, however Front50 will be responsible for determining the enabled state.
 
 Using Front50 as a source of truth will require extension of PF4J.
+
+#### Sending Plugin Configuration to Deck
+
+While Front50 will be the source of truth for which plugins are enabled, we can pass that data via settings.js today and transition to using Front50 when it is ready.
+Using settings.js as an intermediate step allows us to collect feedback from selected users in order to improve the user experience in the future.
+
+Replacing/Updating the templating format for settings.js is out of scope for this project, so we propose to pass that data via a string that Deck can parse to determine which Plugins are installed.
 
 ### Protobuf as the Remote Contract
 As a departure from PF4J, plugin contracts will be defined as Protobuf messages (not services), so long as they are _remote capable_. If a plugin is in-process only, and there’s no expectation that it becomes available for remote plugins, it does not need to define its contract as protobuf.
@@ -149,6 +156,52 @@ When a remote plugin is released, its internal functionality will change immedia
 
 Upon receiving this registration event, Spinnaker would then update the Front50 registry with the new information and downstream services would re-bootstrap the plugin, adding or removing it from extension points as necessary.
 
+### Deployment of Remote Plugins
+
+Halyard based Spinnaker installations will use halyard to deploy remote plugins, similar to other spinnaker services.
+Halyard will also be responsible for registering remote plugins with Front50.
+
+For non-halyard based Spinnaker installations, its up to the operator to deploy and register remote plugins.
+
+### Deployment of In-Process Plugins
+
+Downloading plugin resources is necessary for in-process plugins.
+Services need to have plugin resources available locally in order to load them into their process.
+Plugin resources are hosted on a remote server and must be downloaded in order to use them.
+The existing method of downloading plugin resources involves the service itself downloading plugins via a given URI.
+While this works for the java services, it is not a general solution.
+Furthermore, downloading of plugin resources is a deployment concern and should not be part of the runtime environment.
+
+#### Kubernetes Environment
+
+Halyard can be used for deploying plugins to Kubernetes environments.
+To deploy plugins, Halyard will follow the same pattern as kubernetes regarding downloading resources prior to runtime.
+Downloading of resources will be done through init containers and volume mounts that are then shared with their respective service.
+By using init containers to download resources, we can standardize on one method of deploying plugins to spinnaker services.
+Plugin resources will be placed in the following locations:
+
+- Java services: `/opt/spinnaker/plugins/resources`
+- Deck: `/opt/deck/html/plugins`
+
+Plugins are placed in a different location for Deck so that it can serve plugin resources.
+
+#### VM Based Environment
+
+Plugins and their configurations are baked into image.
+
+### Plugin Configuration
+
+#### Remote Plugins
+
+Halyard or the operator, depending on the preference, will be tasked with providing plugin configurations and plugin overrides to the remote plugins.
+
+#### In Process Plugins
+
+PF4J plugins are configured with properties files and deployments are configured via manifest.yml file.
+Properties files configure the application and manifest.yml lets halyard know where plugin resources are located.
+Manifest.yml can also override properties from properties file.
+PF4J will handle loading plugins into a Spinnaker service, while Manifest.yml will inform which resources should be deployed to each service.
+
 ### Dependencies
 A series of new kork modules will be provided for libraries and services alike to consume to expose new extension points. Under the covers, this introduces PF4J as a new global service dependency.
 
@@ -180,7 +233,7 @@ There are a lot of known unknowns. It’s the intention that separate proposals 
 	* Do we want to support updating backend plugins at runtime?
 * Deck plugins
 	* We want to experiment with some Webpack magic to achieve plugin loading, although we’re unsure if this will be possible yet.
-* 
+*
 
 _What parts of the design do you expect to resolve through the RFC process?_
 _What parts of the design do you expect to resolve through implementation before stabilization?_
@@ -189,7 +242,7 @@ _What related issues do you consider out of scope for this RFC that could be add
 ## Security, Privacy, and Compliance
 In-process plugins present an interesting security issue. Plugins can introduce new dependencies which expose CVEs, they can access internal APIs that may break core—or other plugins—behavior. Further, a story around metrics, logs and error reporting for plugin developers becomes harder as there’s greater possibility for leaking potentially sensitive information to parties that do not necessarily have organizational approval for such data.
 
-Initially speaking, things like logs, metrics and crash reports for in-process plugins will go unaddressed, putting the sole burden of security judgment on the Operator. 
+Initially speaking, things like logs, metrics and crash reports for in-process plugins will go unaddressed, putting the sole burden of security judgment on the Operator.
 
 In-process plugins are not fully isolated, so close scrutiny of a plugin’s behavior is mandatory for any Operator prior to installation or enabling.
 
