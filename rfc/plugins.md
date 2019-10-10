@@ -127,7 +127,7 @@ message PluginManifest {
 	string provider_name = 4;
 
 	// The semver plugin version, ex: "1.0.0"
-	string versionn = 5;
+	string version = 5;
 
 	// A list of plugin dependencies. Initially this will be
 	// informational only. ex: "netflix/somedep>=1.x"
