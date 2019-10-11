@@ -77,7 +77,7 @@ Extension points will be defined and exposed via PF4J.
 
 PF4J has a lot to offer out of the box that we would need to build ourselves, regardless of final implementation. It doesn’t go as far as OSGI, but provides basic (yet extensible) ClassLoader isolation and a simple extension contract that we can use broadly. PF4J was originally built for performing in-process plugins only, but its own extension points make it feasible to enable remote plugins using the same contract. What runtime a particular plugin uses would be determined by a combination of: 1) The extension point developer allowing remote invocation, and 2) an operator selecting the particular runtime they want to use from the available options.
 
-An extension looks like the following:
+An extension point looks like the following:
 
 ```kotlin
 // Definition of the PluginStage extension point.
@@ -87,7 +87,7 @@ An extension looks like the following:
 // Spinnaker needs to know atop whatever PF4J offers out of
 // the box.
 @SpinnakerExtension(drivers = [
-  ExtensionDriver.LOCAL,
+  ExtensionDriver.LOCAL, 
 	ExtensionDriver.REMOTE
 ])
 class PipelineStageExtension : ExtensionPoint {
@@ -108,6 +108,44 @@ Halyard configs can be used to inform services of their _initial state_. When a 
 
 Using Front50 as a source of truth will require extension of PF4J.
 
+```proto
+syntax = "proto3";
+
+// PluginManifest is used during registration of a plugin
+message PluginManifest {
+	// The name of the plugin, which is used as a fully 
+	// qualified identifier, including a namespace and 
+	// plugin name, ex: "netflix/fast-properties"
+	string name = 1;
+
+	// A short description of the plugin
+	// ex: "Provides rollout safety of runtime application 
+	// config via pipelines"
+	string description = 3;
+
+	// The name of the plugin author, ex: "Netflix"
+	string provider_name = 4;
+
+	// The semver plugin version, ex: "1.0.0"
+	string version = 5;
+
+	// A list of plugin dependencies. Initially this will be
+	// informational only. ex: "netflix/somedep>=1.x"
+	repeated string dependencies = 6;
+
+	// required_versions is a repeated string of service version	// requirements. e.g. "clouddriver >= 5.33.0"
+	repeated string required_versions = 7;
+
+	// A list of extension points that the plugin implements.
+	// e.g. "pipelineStage"
+	repeated string provided_capabilities = 8;
+
+	// Whether or not the plugin is enabled. An unset value 
+	// should be considered as true.
+	boolean enabled = 9;
+}
+```
+
 #### Sending Plugin Configuration to Deck
 
 While Front50 will be the source of truth for which plugins are enabled, we can pass that data via settings.js today and transition to using Front50 when it is ready.
@@ -118,7 +156,7 @@ Replacing/Updating the templating format for settings.js is out of scope for thi
 ### Protobuf as the Remote Contract
 As a departure from PF4J, plugin contracts will be defined as Protobuf messages (not services), so long as they are _remote capable_. If a plugin is in-process only, and there’s no expectation that it becomes available for remote plugins, it does not need to define its contract as protobuf.
 
-However, for any remotely-capable extension, its contract must be defined as protobufs, rather than exposed as simple POJOs or interfaces. A key distinction is that we’re not saying gRPC: A remote transport may be Amazon SQS or Redis PubSub, not necessarily gRPC.
+However, for any remotely-capable extension, its contract must be defined as protobufs, rather than exposed as simple POJOs or interfaces. A key distinction is that we’re not specifying gRPC as the transport.  A remote transport may be Amazon SQS or Redis PubSub, not necessarily gRPC.
 
 ### Technology Compatibility Kits
 _alias: TCKs_
@@ -233,7 +271,6 @@ There are a lot of known unknowns. It’s the intention that separate proposals 
 	* Do we want to support updating backend plugins at runtime?
 * Deck plugins
 	* We want to experiment with some Webpack magic to achieve plugin loading, although we’re unsure if this will be possible yet.
-*
 
 _What parts of the design do you expect to resolve through the RFC process?_
 _What parts of the design do you expect to resolve through implementation before stabilization?_
@@ -253,6 +290,9 @@ This proposal alters how Spinnaker development will be performed, as well as how
 * There is an existing plugin system that has made assumptions on plugin loading. There is risk that switching its internal functionality to PF4J may be in some ways backwards incompatible; such as how plugins are detected, or how config is loaded for them.
 	* This will likely cause breakages in existing plugins that will need to be migrated.
 * Service rollbacks when in-process plugins are being used will also rollback plugin versions, which may be undesired behavior.
+* Having Front50 as the source of truth for what plugins are installed across the system, and which ones are enabled or disabled introduces it as a single point of failure for a yet unknown, wide-sweeping segment of functionality for Spinnaker.
+	* Should Front50 be unavailable, services should use the shipped / baked config as defaults.
+	* Gate should store an in-memory cache of the desired plugin state such that Deck may have less dependence on a healthy Front50 deployment.
 
 ## Future Possibilities
 _What are the natural extensions and evolution of this RFC that would affect the project as a whole?_
