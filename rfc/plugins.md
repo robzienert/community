@@ -77,7 +77,7 @@ Extension points will be defined and exposed via PF4J.
 
 PF4J has a lot to offer out of the box that we would need to build ourselves, regardless of final implementation. It doesn’t go as far as OSGI, but provides basic (yet extensible) ClassLoader isolation and a simple extension contract that we can use broadly. PF4J was originally built for performing in-process plugins only, but its own extension points make it feasible to enable remote plugins using the same contract. What runtime a particular plugin uses would be determined by a combination of: 1) The extension point developer allowing remote invocation, and 2) an operator selecting the particular runtime they want to use from the available options.
 
-An extension looks like the following:
+An extension point looks like the following:
 
 ```kotlin
 // Definition of the PluginStage extension point.
