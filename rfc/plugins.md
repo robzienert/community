@@ -149,7 +149,7 @@ message PluginManifest {
 ### Protobuf as the Remote Contract
 As a departure from PF4J, plugin contracts will be defined as Protobuf messages (not services), so long as they are _remote capable_. If a plugin is in-process only, and there’s no expectation that it becomes available for remote plugins, it does not need to define its contract as protobuf.
 
-However, for any remotely-capable extension, its contract must be defined as protobufs, rather than exposed as simple POJOs or interfaces. A key distinction is that we’re not saying gRPC: A remote transport may be Amazon SQS or Redis PubSub, not necessarily gRPC.
+However, for any remotely-capable extension, its contract must be defined as protobufs, rather than exposed as simple POJOs or interfaces. A key distinction is that we’re not specifying gRPC as the transport.  A remote transport may be Amazon SQS or Redis PubSub, not necessarily gRPC.
 
 ### Technology Compatibility Kits
 _alias: TCKs_
