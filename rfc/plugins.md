@@ -175,9 +175,6 @@ message PluginManifest {
 ```
 
 #### Sending Plugin Configuration to Deck
-While Front50 will be the source of truth for which plugins are installed and enabled, we can pass that data via Deck’s configuration file (`settings.js`), we can pass that data via `settings.js` today and transition to using Front50 when it is ready. 
-Using `settings.js` as an intermediate step allows us to collect feedback from selected users in order to improve the user experience in the future.
-
 We plan to prototype alternative options for Deck, such as altering webpack to support dynamic resolution, or introducing a standard container that can build Deck on startup with the configured plugins from Front50.
 
 ### Protobuf as the Remote Contract
@@ -251,10 +248,8 @@ Plugin resources are hosted on a remote server and must be downloaded in order t
 The existing method of downloading plugin resources involves the service itself downloading plugins via a given URI.
 
 #### Kubernetes Environment
-Halyard can be used for deploying plugins to Kubernetes environments.
-To deploy plugins, Halyard will follow the same pattern as Kubernetes regarding downloading resources prior to runtime.
-Downloading of resources will be done through init containers and volume mounts that are then shared with their respective service.
-By using init containers to download resources, we can standardize on one method of deploying plugins to spinnaker services.
+Halyard can be used for updating Front50 with the updated plugin metadata and re-deploying the associated Spinnaker services.
+
 Plugin resources will be placed in the following locations:
 
 - Java services: `/opt/spinnaker/plugins/resources`
@@ -263,7 +258,7 @@ Plugin resources will be placed in the following locations:
 Plugins are placed in a different location for Deck so that it can serve plugin resources.
 
 #### VM Based Environment
-Plugins and their configurations are baked into image.
+Plugins and their configurations may be baked into image.
 
 ### Plugin Configuration
 
