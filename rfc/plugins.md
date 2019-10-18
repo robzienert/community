@@ -125,7 +125,7 @@ Plugins can also be enabled or disabled at runtime without redeploying a service
 This flag is sourced from Front50, which all services will be listening for change events from. Whether this change event is published or polled for initially is unknown.
 
 Halyard configs can be used to inform Spinnaker of desired state, but whatever state is defined in Front50 will be used as the canonical source for plugins. 
-When a service starts up, it will ask Front50 what plugins need to be installed and which of those needs to enabled or disabled. Halyard’s role will only go as far as updating Front50’s repository of plugin metadata.
+When a service starts up, it will ask Front50 what plugins need to be installed and which of those need to be enabled or disabled. Halyard’s role will only go as far as updating Front50’s repository of plugin metadata.
 
 Using Front50 as a source of truth will require extension of PF4J.
 
@@ -258,7 +258,7 @@ Plugin resources will be placed in the following locations:
 Plugins are placed in a different location for Deck so that it can serve plugin resources.
 
 #### VM Based Environment
-Plugins and their configurations may be baked into image.
+Plugins and their configurations are baked into image.
 
 ### Plugin Configuration
 
